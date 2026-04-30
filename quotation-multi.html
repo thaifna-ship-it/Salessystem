@@ -1,0 +1,387 @@
+<div class="row justify-content-center">
+    <div class="col-lg-12">
+        <div class="card shadow-sm border-0 rounded-4 mb-4">
+            <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4 d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="fw-bold text-primary"><i class="bi bi-files me-2"></i>Multi Service Quotation (Smart)</h4>
+                    <p class="text-muted small mb-0">ออกใบเสนอราคาหลายรายการ พร้อมระบบคำนวณอัตโนมัติรายบรรทัด</p>
+                </div>
+                <button class="btn btn-outline-secondary btn-sm" onclick="loadPage('dashboard', document.querySelector('.nav-link.active'))">
+                    <i class="bi bi-arrow-left"></i> กลับ
+                </button>
+            </div>
+            
+            <div class="card-body p-4">
+                <div id="qtAlertBox" class="alert d-none" role="alert"></div>
+
+                <form id="multiQuotationForm">
+                    <!-- 1. CUSTOMER SECTION -->
+                    <div class="card bg-light border-0 mb-4">
+                        <div class="card-body">
+                            <h6 class="fw-bold text-secondary mb-3 text-uppercase small">1. ข้อมูลลูกค้า</h6>
+                            <div class="row g-3">
+                                <div class="col-md-12">
+                                    <label class="form-label fw-bold">เลือกบริษัทลูกค้า <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="qtCustomerSelect" onchange="autoFillCustomerInfo()" required>
+                                        <option value="">-- โหลดรายชื่อลูกค้า... --</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6"><textarea class="form-control bg-white" id="qtCustAddress" rows="2" placeholder="ที่อยู่ลูกค้า" readonly disabled></textarea></div>
+                                <div class="col-md-3"><input type="text" class="form-control bg-white" id="qtCustPic" placeholder="ผู้ติดต่อ" readonly disabled></div>
+                                <div class="col-md-3"><input type="email" class="form-control bg-white" id="qtCustEmail" placeholder="อีเมล" readonly disabled></div>
+                                <input type="hidden" id="qtCustNameHidden">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. MULTI-SERVICE ITEMS -->
+                    <div class="card border-primary mb-4 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="fw-bold text-primary mb-0 text-uppercase small">2. รายการบริการ (Items)</h6>
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="addNewItemRow()">
+                                    <i class="bi bi-plus-circle me-1"></i> เพิ่มรายการ
+                                </button>
+                            </div>
+                            
+                            <div class="table-responsive">
+                                <table class="table table-bordered align-middle" id="itemsTable">
+                                    <thead class="table-light small">
+                                        <tr>
+                                            <th style="width: 5%;">No.</th>
+                                            <th style="width: 30%;">Service & Details</th>
+                                            <th style="width: 10%;">Qty</th>
+                                            <th style="width: 15%;">Unit Price</th>
+                                            <th style="width: 15%;">Discount</th>
+                                            <th style="width: 15%;">Total</th>
+                                            <th style="width: 5%;"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="itemsBody">
+                                        <!-- Rows will be added here -->
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Summary Totals -->
+                            <div class="row justify-content-end">
+                                <div class="col-md-5">
+                                    <div class="p-3 rounded bg-light border">
+                                        <div class="d-flex justify-content-between mb-1 small">
+                                            <span class="text-muted">ยอดรวมก่อนภาษี:</span>
+                                            <span id="globalSubTotal" class="fw-bold">0.00</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-1 small">
+                                            <span class="text-muted">VAT 7%:</span>
+                                            <span id="globalVat" class="fw-bold">0.00</span>
+                                        </div>
+                                        <hr class="my-2">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span class="h6 fw-bold mb-0 text-primary">ยอดสุทธิ (Grand Total):</span>
+                                            <span id="globalGrandTotal" class="h4 fw-bold mb-0 text-primary">0.00</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. FOOTER SECTION -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small">ผู้ดูแล (Sales PIC) <span class="text-danger">*</span></label>
+                            <select class="form-select" id="qtSalesPic" required></select>
+                        </div>
+                        <div class="col-md-6 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary btn-lg w-100 shadow" id="btnSaveQt">
+                                <span id="qtBtnText">บันทึกและสร้างใบเสนอราคา</span>
+                                <span id="qtBtnLoader" class="spinner-border spinner-border-sm d-none"></span>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Template for Conditional Boxes (Hidden) -->
+<template id="primeBoxTemplate">
+    <div class="mt-2 p-2 bg-white rounded border border-info small">
+        <div class="row g-1 align-items-center">
+            <div class="col-5">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-info text-white">S</span>
+                    <select class="form-select month-picker"></select>
+                    <select class="form-select year-picker"></select>
+                </div>
+            </div>
+            <div class="col-2 text-center text-muted">to</div>
+            <div class="col-5">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-info text-white">E</span>
+                    <select class="form-select month-picker"></select>
+                    <select class="form-select year-picker"></select>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<template id="magBoxTemplate">
+    <div class="mt-2 p-2 bg-white rounded border border-warning small">
+        <div class="row g-1 align-items-center">
+            <div class="col-5">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-warning">S</span>
+                    <select class="form-select pair-picker"></select>
+                    <select class="form-select year-picker"></select>
+                </div>
+            </div>
+            <div class="col-2 text-center text-muted">to</div>
+            <div class="col-5">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-warning">E</span>
+                    <select class="form-select pair-picker"></select>
+                    <select class="form-select year-picker"></select>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<script>
+    const API_URL = CONFIG ? CONFIG.WEB_APP_URL : "https://script.google.com/macros/s/AKfycbxhQ1-Gx3BnlwEqnFDBtkDfPr77LSwxHo-qreFgDKymRokiDw60XxPXlTRZUM4YI5vW/exec";
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const magPairs = ["Jan-Feb", "Mar-Apr", "May-Jun", "Jul-Aug", "Sep-Oct", "Nov-Dec"];
+    let masterData = { customers: [], services: [], staff: [] };
+    let rowCount = 0;
+
+    (function init() {
+        fetchMasterData();
+        addNewItemRow(); // Start with one row
+    })();
+
+    async function fetchMasterData() {
+        const res = await fetch(`${API_URL}?action=getSingleQtMasterData`);
+        masterData = await res.json();
+        populateSelect('qtCustomerSelect', masterData.customers, 'companyName');
+        populateSelect('qtSalesPic', masterData.staff, 'name');
+        
+        // Refresh first row's service dropdown after data loads
+        const firstRowSvc = document.querySelector('.service-select');
+        if(firstRowSvc) populateServiceOptions(firstRowSvc);
+    }
+
+    function populateSelect(id, items, key) {
+        const s = document.getElementById(id);
+        s.innerHTML = '<option value="">-- โปรดเลือก --</option>';
+        items.forEach(item => s.add(new Option(item[key], item[key])));
+    }
+
+    function populateServiceOptions(selectEl) {
+        selectEl.innerHTML = '<option value="">-- เลือกบริการ --</option>';
+        masterData.services.forEach(s => selectEl.add(new Option(s.name, s.name)));
+    }
+
+    function addNewItemRow() {
+        rowCount++;
+        const tbody = document.getElementById('itemsBody');
+        const tr = document.createElement('tr');
+        tr.id = `row-${rowCount}`;
+        tr.innerHTML = `
+            <td class="text-center fw-bold">${rowCount}</td>
+            <td>
+                <select class="form-select form-select-sm service-select mb-2" onchange="onRowServiceChange(${rowCount})" required></select>
+                <div class="conditional-container" id="condition-${rowCount}"></div>
+                <textarea class="form-control form-control-sm mt-2 row-desc" rows="2" placeholder="รายละเอียดเพิ่มเติม"></textarea>
+            </td>
+            <td><input type="number" class="form-control form-control-sm text-center row-qty" value="1" min="1" oninput="calculateGlobalTotals()" required></td>
+            <td><input type="number" class="form-control form-control-sm text-end row-price" value="0" oninput="calculateGlobalTotals()" required></td>
+            <td>
+                <div class="input-group input-group-sm">
+                    <input type="number" class="form-control text-end row-disc-val" value="0" oninput="calculateGlobalTotals()">
+                    <select class="form-select row-disc-type" style="max-width: 60px;" onchange="calculateGlobalTotals()">
+                        <option value="baht">฿</option>
+                        <option value="percent">%</option>
+                    </select>
+                </div>
+            </td>
+            <td class="text-end fw-bold row-total">0.00</td>
+            <td class="text-center">
+                <button type="button" class="btn btn-link text-danger p-0" onclick="removeRow(${rowCount})">
+                    <i class="bi bi-trash fs-5"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+        populateServiceOptions(tr.querySelector('.service-select'));
+    }
+
+    function removeRow(id) {
+        const row = document.getElementById(`row-${id}`);
+        if(document.querySelectorAll('#itemsBody tr').length > 1) {
+            row.remove();
+            calculateGlobalTotals();
+        } else {
+            alert("ต้องมีอย่างน้อย 1 รายการ");
+        }
+    }
+
+    function onRowServiceChange(id) {
+        const row = document.getElementById(`row-${id}`);
+        const svcName = row.querySelector('.service-select').value;
+        const container = row.querySelector('.conditional-container');
+        const qtyInput = row.querySelector('.row-qty');
+        const priceInput = row.querySelector('.row-price');
+        
+        container.innerHTML = '';
+        qtyInput.readOnly = false;
+
+        const svcData = masterData.services.find(s => s.name === svcName);
+        if(svcData) priceInput.value = svcData.defaultPrice;
+
+        if (svcName.includes("Prime page")) {
+            const template = document.getElementById('primeBoxTemplate').content.cloneNode(true);
+            container.appendChild(template);
+            setupPickers(container, 'prime', id);
+            qtyInput.readOnly = true;
+        } else if (svcName.includes("Magazine")) {
+            const template = document.getElementById('magBoxTemplate').content.cloneNode(true);
+            container.appendChild(template);
+            setupPickers(container, 'mag', id);
+            qtyInput.readOnly = true;
+        }
+        calculateGlobalTotals();
+    }
+
+    function setupPickers(container, type, rowId) {
+        const currentYear = new Date().getFullYear();
+        const selects = container.querySelectorAll('select');
+        
+        if (type === 'prime') {
+            // Start Month(0), Start Year(1), End Month(2), End Year(3)
+            months.forEach((m, i) => { selects[0].add(new Option(m, i + 1)); selects[2].add(new Option(m, i + 1)); });
+            for(let i = -1; i <= 3; i++) { 
+                const y = currentYear + i; 
+                selects[1].add(new Option(y, y)); selects[3].add(new Option(y, y)); 
+            }
+            selects.forEach(s => s.addEventListener('change', () => calcRowSmartQty(rowId, 'prime')));
+            selects[1].value = currentYear; selects[3].value = currentYear;
+            calcRowSmartQty(rowId, 'prime');
+        } else {
+            // Start Pair(0), Start Year(1), End Pair(2), End Year(3)
+            magPairs.forEach((p, i) => { selects[0].add(new Option(p, i)); selects[2].add(new Option(p, i)); });
+            for(let i = -1; i <= 3; i++) { 
+                const y = currentYear + i; 
+                selects[1].add(new Option(y, y)); selects[3].add(new Option(y, y)); 
+            }
+            selects.forEach(s => s.addEventListener('change', () => calcRowSmartQty(rowId, 'mag')));
+            selects[1].value = currentYear; selects[3].value = currentYear;
+            calcRowSmartQty(rowId, 'mag');
+        }
+    }
+
+    function calcRowSmartQty(rowId, type) {
+        const row = document.getElementById(`row-${rowId}`);
+        const selects = row.querySelectorAll('.conditional-container select');
+        const qtyInput = row.querySelector('.row-qty');
+        const descArea = row.querySelector('.row-desc');
+        
+        let qty = 1;
+        let desc = "";
+
+        if (type === 'prime') {
+            const sM = parseInt(selects[0].value), sY = parseInt(selects[1].value);
+            const eM = parseInt(selects[2].value), eY = parseInt(selects[3].value);
+            qty = ((eY - sY) * 12) + (eM - sM) + 1;
+            desc = `Contract: ${months[sM-1]} ${sY} - ${months[eM-1]} ${eY} (${qty} Mos)`;
+        } else {
+            const sV = parseInt(selects[0].value), sY = parseInt(selects[1].value);
+            const eV = parseInt(selects[2].value), eY = parseInt(selects[3].value);
+            qty = ((eY - sY) * 6) + (eV - sV) + 1;
+            desc = `Magazine: ${magPairs[sV]} ${sY} - ${magPairs[eV]} ${eY} (${qty} Vols)`;
+        }
+
+        qtyInput.value = qty > 0 ? qty : 1;
+        descArea.value = desc;
+        calculateGlobalTotals();
+    }
+
+    function calculateGlobalTotals() {
+        let subtotal = 0;
+        document.querySelectorAll('#itemsBody tr').forEach(row => {
+            const qty = parseFloat(row.querySelector('.row-qty').value) || 0;
+            const price = parseFloat(row.querySelector('.row-price').value) || 0;
+            const dVal = parseFloat(row.querySelector('.row-disc-val').value) || 0;
+            const dType = row.querySelector('.row-disc-type').value;
+
+            let base = qty * price;
+            let disc = (dType === 'percent') ? (base * dVal / 100) : dVal;
+            let rowTotal = Math.max(0, base - disc);
+            
+            row.querySelector('.row-total').innerText = rowTotal.toLocaleString('en-US', {minimumFractionDigits: 2});
+            subtotal += rowTotal;
+        });
+
+        const vat = subtotal * 0.07;
+        const grand = subtotal + vat;
+
+        document.getElementById('globalSubTotal').innerText = subtotal.toLocaleString('th-TH', {minimumFractionDigits: 2});
+        document.getElementById('globalVat').innerText = vat.toLocaleString('th-TH', {minimumFractionDigits: 2});
+        document.getElementById('globalGrandTotal').innerText = grand.toLocaleString('th-TH', {minimumFractionDigits: 2});
+    }
+
+    function autoFillCustomerInfo() {
+        const cust = masterData.customers.find(c => c.companyName === document.getElementById('qtCustomerSelect').value);
+        if (cust) {
+            document.getElementById('qtCustNameHidden').value = cust.companyName;
+            document.getElementById('qtCustAddress').value = cust.address || '';
+            document.getElementById('qtCustPic').value = cust.picName || '';
+            document.getElementById('qtCustEmail').value = cust.email || '';
+        }
+    }
+
+    document.getElementById('multiQuotationForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const btn = document.getElementById('btnSaveQt'), loader = document.getElementById('qtBtnLoader'), alertB = document.getElementById('qtAlertBox');
+        btn.disabled = true; loader.classList.remove('d-none'); alertB.classList.add('d-none');
+
+        // Prepare Items Array
+        const items = [];
+        document.querySelectorAll('#itemsBody tr').forEach(row => {
+            items.push({
+                service: row.querySelector('.service-select').value,
+                description: row.querySelector('.row-desc').value,
+                qty: row.querySelector('.row-qty').value,
+                price: row.querySelector('.row-price').value,
+                discount: row.querySelector('.row-disc-val').value,
+                total: row.querySelector('.row-total').innerText.replace(/,/g, '')
+            });
+        });
+
+        const payload = {
+            action: 'saveMultiQuotation', // New action needed in GAS
+            customerName: document.getElementById('qtCustNameHidden').value,
+            items: items,
+            grandTotal: document.getElementById('globalGrandTotal').innerText.replace(/,/g, ''),
+            salesPic: document.getElementById('qtSalesPic').value
+        };
+
+        try {
+            const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) });
+            const result = await res.json();
+            if (result.success) {
+                alertB.className = 'alert alert-success mt-3';
+                alertB.innerHTML = `สร้างสำเร็จ! เลขที่ QT: <strong>${result.qtNo}</strong>`;
+                alertB.classList.remove('d-none');
+                window.scrollTo(0, 0);
+            }
+        } catch (err) {
+            alertB.className = 'alert alert-danger mt-3'; alertB.innerText = "Error: ไม่สามารถบันทึกได้";
+            alertB.classList.remove('d-none');
+        } finally {
+            btn.disabled = false; loader.classList.add('d-none');
+        }
+    });
+</script>
