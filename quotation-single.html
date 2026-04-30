@@ -3,43 +3,32 @@
         <div class="card shadow-sm border-0 rounded-4 mb-4">
             <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4 d-flex justify-content-between align-items-center">
                 <div>
-                    <h4 class="fw-bold text-primary"><i class="bi bi-file-earmark-text me-2"></i>Single Service Quotation</h4>
-                    <p class="text-muted small mb-0">ออกใบเสนอราคาสำหรับบริการเดียว พร้อมระบุรายละเอียดเพิ่มเติมได้อิสระ</p>
+                    <h4 class="fw-bold text-primary"><i class="bi bi-file-earmark-text me-2"></i>Single Service Quotation (Smart)</h4>
+                    <p class="text-muted small mb-0">ระบบคำนวณ Qty และลงรายละเอียดสัญญาให้อัตโนมัติ</p>
                 </div>
                 <button class="btn btn-outline-secondary btn-sm" onclick="loadPage('dashboard', document.querySelector('.nav-link.active'))">
-                    <i class="bi bi-arrow-left"></i> กลับหน้าหลัก
+                    <i class="bi bi-arrow-left"></i> กลับ
                 </button>
             </div>
             
             <div class="card-body p-4">
-                <!-- Alert Box สำหรับแจ้งเตือนผลการบันทึก -->
                 <div id="qtAlertBox" class="alert d-none" role="alert"></div>
 
                 <form id="singleQuotationForm">
                     <!-- 1. CUSTOMER SECTION -->
                     <div class="card bg-light border-0 mb-4">
                         <div class="card-body">
-                            <h6 class="fw-bold text-secondary mb-3 text-uppercase small">1. ข้อมูลลูกค้า (Customer Information)</h6>
+                            <h6 class="fw-bold text-secondary mb-3 text-uppercase small">1. ข้อมูลลูกค้า</h6>
                             <div class="mb-3">
                                 <label class="form-label fw-bold">เลือกบริษัทลูกค้า <span class="text-danger">*</span></label>
                                 <select class="form-select" id="qtCustomerSelect" onchange="autoFillCustomerInfo()" required>
-                                    <option value="">-- กำลังโหลดรายชื่อลูกค้า... --</option>
+                                    <option value="">-- โหลดรายชื่อลูกค้า... --</option>
                                 </select>
                             </div>
-
                             <div class="row g-3">
-                                <div class="col-12">
-                                    <label class="form-label small text-muted mb-1">ที่อยู่ (Address)</label>
-                                    <textarea class="form-control bg-white" id="qtCustAddress" rows="2" readonly disabled></textarea>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label small text-muted mb-1">ผู้ติดต่อ (PIC Name)</label>
-                                    <input type="text" class="form-control bg-white" id="qtCustPic" readonly disabled>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label small text-muted mb-1">อีเมล (Email)</label>
-                                    <input type="email" class="form-control bg-white" id="qtCustEmail" readonly disabled>
-                                </div>
+                                <div class="col-12"><textarea class="form-control bg-white" id="qtCustAddress" rows="2" readonly disabled></textarea></div>
+                                <div class="col-md-6"><input type="text" class="form-control bg-white" id="qtCustPic" readonly disabled></div>
+                                <div class="col-md-6"><input type="email" class="form-control bg-white" id="qtCustEmail" readonly disabled></div>
                                 <input type="hidden" id="qtCustNameHidden">
                             </div>
                         </div>
@@ -48,42 +37,83 @@
                     <!-- 2. SERVICE DETAILS -->
                     <div class="card border-primary mb-4 shadow-sm">
                         <div class="card-body">
-                            <h6 class="fw-bold text-primary mb-3 text-uppercase small">2. รายละเอียดบริการ (Service Details)</h6>
+                            <h6 class="fw-bold text-primary mb-3 text-uppercase small">2. รายละเอียดบริการ</h6>
                             
                             <div class="row g-3 mb-3">
                                 <div class="col-md-12">
-                                    <label class="form-label fw-bold">ประเภทบริการ (Service Type) <span class="text-danger">*</span></label>
-                                    <select class="form-select border-primary" id="qtServiceSelect" onchange="autoFillServiceDetails()" required>
-                                        <option value="">-- กำลังโหลดประเภทบริการ... --</option>
+                                    <label class="form-label fw-bold">ประเภทบริการ <span class="text-danger">*</span></label>
+                                    <select class="form-select border-primary" id="qtServiceSelect" onchange="onServiceTypeChange()" required>
+                                        <option value="">-- โหลดประเภทบริการ... --</option>
                                     </select>
                                 </div>
-                                <!-- ช่อง Description ที่เพิ่มใหม่ -->
+
+                                <!-- [Conditional Box] EMIDAS Prime Page -->
+                                <div id="boxPrimePage" class="col-12 d-none p-3 bg-light rounded border-start border-4 border-info">
+                                    <label class="fw-bold small mb-2 text-info uppercase">Contract Period (Monthly)</label>
+                                    <div class="row g-2 align-items-center">
+                                        <div class="col-md-5">
+                                            <div class="input-group input-group-sm">
+                                                <span class="input-group-text">Start</span>
+                                                <select class="form-select" id="primeStartMonth" onchange="calcPrimeQty()"></select>
+                                                <select class="form-select" id="primeStartYear" onchange="calcPrimeQty()"></select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2 text-center small fw-bold text-muted">UNTIL</div>
+                                        <div class="col-md-5">
+                                            <div class="input-group input-group-sm">
+                                                <span class="input-group-text">End</span>
+                                                <select class="form-select" id="primeEndMonth" onchange="calcPrimeQty()"></select>
+                                                <select class="form-select" id="primeEndYear" onchange="calcPrimeQty()"></select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- [Conditional Box] EMIDAS Magazine -->
+                                <div id="boxMagazine" class="col-12 d-none p-3 bg-light rounded border-start border-4 border-warning">
+                                    <label class="fw-bold small mb-2 text-warning uppercase">Magazine Vol. Selection</label>
+                                    <div class="row g-2">
+                                        <div class="col-md-6">
+                                            <div class="input-group input-group-sm">
+                                                <span class="input-group-text">Start Vol.</span>
+                                                <select class="form-select" id="magStartVol" onchange="calcMagQty()"></select>
+                                                <select class="form-select" id="magStartYear" onchange="calcMagQty()"></select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="input-group input-group-sm">
+                                                <span class="input-group-text">End Vol.</span>
+                                                <select class="form-select" id="magEndVol" onchange="calcMagQty()"></select>
+                                                <select class="form-select" id="magEndYear" onchange="calcMagQty()"></select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div class="col-md-12">
-                                    <label class="form-label fw-bold text-secondary">รายละเอียดเพิ่มเติม (Description / Remarks)</label>
-                                    <textarea class="form-control" id="qtDescription" rows="3" placeholder="ระบุงวดเดือน, ขนาด, หรือเงื่อนไขเพิ่มเติม (เช่น งวดเดือน April-2026)"></textarea>
-                                    <div class="form-text">ข้อมูลส่วนนี้จะไปปรากฏในใบเสนอราคาเพื่ออธิบายรายละเอียดให้ลูกค้า</div>
+                                    <label class="form-label fw-bold text-secondary">Description (จะถูกเติมให้อัตโนมัติ หรือพิมพ์เพิ่มได้)</label>
+                                    <textarea class="form-control" id="qtDescription" rows="3"></textarea>
                                 </div>
                             </div>
 
-                            <!-- ส่วนตัวเลขการคำนวณ -->
-                            <div class="row g-3 align-items-end mb-4 pt-2 pb-3 border-bottom border-light">
+                            <div class="row g-3 align-items-end mb-4 pt-2 border-bottom border-light pb-3">
                                 <div class="col-md-3">
                                     <label class="form-label fw-bold">จำนวน (Qty)</label>
-                                    <input type="number" class="form-control text-center" id="qtQty" value="1" min="1" step="1" oninput="calcTotals()" required>
+                                    <input type="number" class="form-control text-center" id="qtQty" value="1" min="1" oninput="calcTotals()" required>
                                 </div>
                                 <div class="col-md-3">
-                                    <label class="form-label fw-bold">ราคาต่อหน่วย (Unit Price)</label>
-                                    <input type="number" class="form-control text-end" id="qtUnitPrice" value="0" min="0" oninput="calcTotals()" required>
+                                    <label class="form-label fw-bold">ราคาหน่วย (Unit Price)</label>
+                                    <input type="number" class="form-control text-end" id="qtUnitPrice" value="0" oninput="calcTotals()" required>
                                 </div>
                                 <div class="col-md-3">
-                                    <label class="form-label fw-bold">ค่าเริ่มต้น (Initial Cost)</label>
-                                    <input type="number" class="form-control text-end" id="qtInitialCost" value="0" min="0" oninput="calcTotals()">
+                                    <label class="form-label fw-bold">Initial Cost</label>
+                                    <input type="number" class="form-control text-end" id="qtInitialCost" value="0" oninput="calcTotals()">
                                 </div>
                                 <div class="col-md-3">
-                                    <label class="form-label fw-bold text-danger">ส่วนลด (Discount)</label>
+                                    <label class="form-label fw-bold text-danger">ส่วนลด</label>
                                     <div class="input-group">
-                                        <input type="number" class="form-control text-end" id="qtDiscountVal" value="0" min="0" oninput="calcTotals()">
-                                        <select class="form-select bg-light" style="max-width: 75px;" id="qtDiscountType" onchange="calcTotals()">
+                                        <input type="number" class="form-control text-end" id="qtDiscountVal" value="0" oninput="calcTotals()">
+                                        <select class="form-select bg-light" id="qtDiscountType" style="max-width: 75px;" onchange="calcTotals()">
                                             <option value="baht">฿</option>
                                             <option value="percent">%</option>
                                         </select>
@@ -91,41 +121,25 @@
                                 </div>
                             </div>
 
-                            <!-- ส่วนสรุปยอดเงิน -->
                             <div class="row justify-content-end">
-                                <div class="col-md-6">
-                                    <div class="p-3 rounded bg-light shadow-sm">
-                                        <div class="d-flex justify-content-between mb-2">
-                                            <span class="text-muted">ยอดก่อนภาษี (Sub-total):</span>
-                                            <span id="txtSubTotal" class="fw-bold">0.00</span>
-                                        </div>
-                                        <div class="d-flex justify-content-between mb-2">
-                                            <span class="text-muted">ภาษีมูลค่าเพิ่ม VAT 7%:</span>
-                                            <span id="txtVat" class="fw-bold">0.00</span>
-                                        </div>
-                                        <hr class="my-2">
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <span class="h6 fw-bold mb-0 text-primary">ยอดรวมสุทธิ (Grand Total):</span>
-                                            <span id="txtGrandTotal" class="h4 fw-bold mb-0 text-primary">0.00</span>
-                                        </div>
-                                    </div>
+                                <div class="col-md-6 bg-light p-3 rounded">
+                                    <div class="d-flex justify-content-between mb-1 small text-muted"><span>ยอดก่อนภาษี:</span> <span id="txtSubTotal">0.00</span></div>
+                                    <div class="d-flex justify-content-between mb-1 small text-muted"><span>VAT 7%:</span> <span id="txtVat">0.00</span></div>
+                                    <div class="d-flex justify-content-between fw-bold text-primary h5 mt-2"><span>Grand Total:</span> <span id="txtGrandTotal">0.00</span></div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- 3. SALES PIC & SUBMIT -->
                     <div class="row g-3 mb-4">
                         <div class="col-md-6">
-                            <label class="form-label fw-bold">ผู้ดูแล (Sales PIC) <span class="text-danger">*</span></label>
-                            <select class="form-select" id="qtSalesPic" required>
-                                <option value="">-- เลือกรายชื่อ Sales --</option>
-                            </select>
+                            <label class="form-label fw-bold">Sales PIC <span class="text-danger">*</span></label>
+                            <select class="form-select" id="qtSalesPic" required></select>
                         </div>
                         <div class="col-md-6 d-flex align-items-end">
                             <button type="submit" class="btn btn-primary btn-lg w-100 shadow" id="btnSaveQt">
-                                <span id="qtBtnText"><i class="bi bi-check2-circle me-2"></i> บันทึกและออกเลข Quotation</span>
-                                <span id="qtBtnLoader" class="spinner-border spinner-border-sm d-none" role="status"></span>
+                                <span id="qtBtnText">สร้างใบเสนอราคา</span>
+                                <span id="qtBtnLoader" class="spinner-border spinner-border-sm d-none"></span>
                             </button>
                         </div>
                     </div>
@@ -136,61 +150,110 @@
 </div>
 
 <script>
-    // ดึง URL จาก index.html (CONFIG)
     const API_URL = CONFIG ? CONFIG.WEB_APP_URL : "https://script.google.com/macros/s/AKfycbxhQ1-Gx3BnlwEqnFDBtkDfPr77LSwxHo-qreFgDKymRokiDw60XxPXlTRZUM4YI5vW/exec";
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const magPairs = ["Jan-Feb", "Mar-Apr", "May-Jun", "Jul-Aug", "Sep-Oct", "Nov-Dec"];
     let masterData = { customers: [], services: [], staff: [] };
 
-    // รันฟังก์ชันเมื่อหน้าย่อยถูกโหลด
     (function init() {
-        if (!API_URL) {
-            console.error("WEB_APP_URL is not defined in index.html");
-            return;
-        }
+        initDropdownOptions();
         fetchMasterData();
     })();
 
-    async function fetchMasterData() {
-        try {
-            const res = await fetch(`${API_URL}?action=getSingleQtMasterData`);
-            masterData = await res.json();
-            
-            // เติมข้อมูลลง Dropdowns
-            populateSelect('qtCustomerSelect', masterData.customers, 'companyName');
-            populateSelect('qtServiceSelect', masterData.services, 'name');
-            populateSelect('qtSalesPic', masterData.staff, 'name');
-        } catch (err) {
-            console.error("Load Failed:", err);
-        }
-    }
+    // เติมตัวเลือก เดือน/ปี ในกล่องเงื่อนไข
+    function initDropdownOptions() {
+        const currentYear = new Date().getFullYear();
+        const pSM = document.getElementById('primeStartMonth'), pEM = document.getElementById('primeEndMonth');
+        const pSY = document.getElementById('primeStartYear'), pEY = document.getElementById('primeEndYear');
+        const mSV = document.getElementById('magStartVol'), mEV = document.getElementById('magEndVol');
+        const mSY = document.getElementById('magStartYear'), mEY = document.getElementById('magEndYear');
 
-    function populateSelect(elementId, items, key) {
-        const select = document.getElementById(elementId);
-        select.innerHTML = '<option value="">-- โปรดเลือก --</option>';
-        items.forEach(item => {
-            select.add(new Option(item[key], item[key]));
+        months.forEach((m, i) => { 
+            pSM.add(new Option(m, i + 1)); 
+            pEM.add(new Option(m, i + 1)); 
         });
-    }
+        magPairs.forEach((p, i) => { 
+            mSV.add(new Option(p, i)); 
+            mEV.add(new Option(p, i)); 
+        });
 
-    function autoFillCustomerInfo() {
-        const selected = document.getElementById('qtCustomerSelect').value;
-        const cust = masterData.customers.find(c => c.companyName === selected);
-        if (cust) {
-            document.getElementById('qtCustNameHidden').value = cust.companyName;
-            document.getElementById('qtCustAddress').value = cust.address || '';
-            document.getElementById('qtCustPic').value = cust.picName || '';
-            document.getElementById('qtCustEmail').value = cust.email || '';
+        for(let i = -1; i <= 3; i++) {
+            const yr = currentYear + i;
+            pSY.add(new Option(yr, yr)); pEY.add(new Option(yr, yr));
+            mSY.add(new Option(yr, yr)); mEY.add(new Option(yr, yr));
         }
+        pSY.value = currentYear; pEY.value = currentYear;
+        mSY.value = currentYear; mEY.value = currentYear;
     }
 
-    function autoFillServiceDetails() {
-        const selected = document.getElementById('qtServiceSelect').value;
-        const svc = masterData.services.find(s => s.name === selected);
-        if (svc) {
-            document.getElementById('qtUnitPrice').value = svc.defaultPrice || 0;
+    async function fetchMasterData() {
+        const res = await fetch(`${API_URL}?action=getSingleQtMasterData`);
+        masterData = await res.json();
+        populateSelect('qtCustomerSelect', masterData.customers, 'companyName');
+        populateSelect('qtServiceSelect', masterData.services, 'name');
+        populateSelect('qtSalesPic', masterData.staff, 'name');
+    }
+
+    function populateSelect(id, items, key) {
+        const s = document.getElementById(id);
+        s.innerHTML = '<option value="">-- โปรดเลือก --</option>';
+        items.forEach(item => s.add(new Option(item[key], item[key])));
+    }
+
+    // Logic: เมื่อเปลี่ยนประเภทบริการ
+    function onServiceTypeChange() {
+        const svc = document.getElementById('qtServiceSelect').value;
+        const boxPrime = document.getElementById('boxPrimePage');
+        const boxMag = document.getElementById('boxMagazine');
+        
+        boxPrime.classList.add('d-none');
+        boxMag.classList.add('d-none');
+        document.getElementById('qtQty').readOnly = false;
+
+        if (svc.includes("Prime page")) {
+            boxPrime.classList.remove('d-none');
+            document.getElementById('qtQty').readOnly = true;
+            calcPrimeQty();
+        } else if (svc.includes("Magazine")) {
+            boxMag.classList.remove('d-none');
+            document.getElementById('qtQty').readOnly = true;
+            calcMagQty();
+        }
+
+        const svcData = masterData.services.find(s => s.name === svc);
+        if (svcData) {
+            document.getElementById('qtUnitPrice').value = svcData.defaultPrice;
             calcTotals();
         }
     }
 
+    // Logic: คำนวณสัญญา Prime Page
+    function calcPrimeQty() {
+        const sM = parseInt(document.getElementById('primeStartMonth').value), sY = parseInt(document.getElementById('primeStartYear').value);
+        const eM = parseInt(document.getElementById('primeEndMonth').value), eY = parseInt(document.getElementById('primeEndYear').value);
+        
+        let qty = ((eY - sY) * 12) + (eM - sM) + 1;
+        qty = qty > 0 ? qty : 1;
+        
+        document.getElementById('qtQty').value = qty;
+        document.getElementById('qtDescription').value = `Contract Period: ${months[sM-1]} ${sY} - ${months[eM-1]} ${eY} (${qty} Months)`;
+        calcTotals();
+    }
+
+    // Logic: คำนวณสัญญา Magazine
+    function calcMagQty() {
+        const sV = parseInt(document.getElementById('magStartVol').value), sY = parseInt(document.getElementById('magStartYear').value);
+        const eV = parseInt(document.getElementById('magEndVol').value), eY = parseInt(document.getElementById('magEndYear').value);
+        
+        let qty = ((eY - sY) * 6) + (eV - sV) + 1;
+        qty = qty > 0 ? qty : 1;
+
+        document.getElementById('qtQty').value = qty;
+        document.getElementById('qtDescription').value = `Magazine Issue: ${magPairs[sV]} ${sY} - ${magPairs[eV]} ${eY} (${qty} Issues)`;
+        calcTotals();
+    }
+
+    // ฟังก์ชันคำนวณเงินเดิม
     function calcTotals() {
         const qty = parseFloat(document.getElementById('qtQty').value) || 0;
         const unit = parseFloat(document.getElementById('qtUnitPrice').value) || 0;
@@ -199,32 +262,35 @@
         const isPercent = document.getElementById('qtDiscountType').value === 'percent';
 
         let base = (qty * unit) + initial;
-        let discountAmt = isPercent ? (base * (disc / 100)) : disc;
-        let subtotal = Math.max(0, base - discountAmt);
+        let subtotal = base - (isPercent ? (base * disc / 100) : disc);
+        subtotal = Math.max(0, subtotal);
         let vat = subtotal * 0.07;
-        let grand = subtotal + vat;
 
         document.getElementById('txtSubTotal').innerText = subtotal.toLocaleString('th-TH', {minimumFractionDigits: 2});
         document.getElementById('txtVat').innerText = vat.toLocaleString('th-TH', {minimumFractionDigits: 2});
-        document.getElementById('txtGrandTotal').innerText = grand.toLocaleString('th-TH', {minimumFractionDigits: 2});
+        document.getElementById('txtGrandTotal').innerText = (subtotal + vat).toLocaleString('th-TH', {minimumFractionDigits: 2});
+    }
+
+    function autoFillCustomerInfo() {
+        const cust = masterData.customers.find(c => c.companyName === document.getElementById('qtCustomerSelect').value);
+        if (cust) {
+            document.getElementById('qtCustNameHidden').value = cust.companyName;
+            document.getElementById('qtCustAddress').value = cust.address || '';
+            document.getElementById('qtCustPic').value = cust.picName || '';
+            document.getElementById('qtCustEmail').value = cust.email || '';
+        }
     }
 
     document.getElementById('singleQuotationForm').addEventListener('submit', async function(e) {
         e.preventDefault();
-        
-        const btnSave = document.getElementById('btnSaveQt');
-        const loader = document.getElementById('qtBtnLoader');
-        const alertBox = document.getElementById('qtAlertBox');
-
-        btnSave.disabled = true;
-        loader.classList.remove('d-none');
-        alertBox.classList.add('d-none');
+        const btn = document.getElementById('btnSaveQt'), loader = document.getElementById('qtBtnLoader'), alertB = document.getElementById('qtAlertBox');
+        btn.disabled = true; loader.classList.remove('d-none'); alertB.classList.add('d-none');
 
         const payload = {
             action: 'saveSingleQuotation',
             customerName: document.getElementById('qtCustNameHidden').value,
             serviceType: document.getElementById('qtServiceSelect').value,
-            description: document.getElementById('qtDescription').value, // ส่งช่องพิมพ์อิสระไปเก็บใน Sheet
+            description: document.getElementById('qtDescription').value,
             qty: document.getElementById('qtQty').value,
             unitPrice: document.getElementById('qtUnitPrice').value,
             initialCost: document.getElementById('qtInitialCost').value,
@@ -234,22 +300,18 @@
         };
 
         try {
-            const response = await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) });
-            const result = await response.json();
-            
+            const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) });
+            const result = await res.json();
             if (result.success) {
-                alertBox.className = 'alert alert-success mt-3';
-                alertBox.innerHTML = `<i class="bi bi-check-circle-fill me-2"></i> บันทึกสำเร็จ! เลขที่ QT: <strong>${result.qtNo}</strong>`;
-                alertBox.classList.remove('d-none');
+                alertB.className = 'alert alert-success mt-3';
+                alertB.innerHTML = `สำเร็จ! เลขที่ QT: <strong>${result.qtNo}</strong>`;
+                alertB.classList.remove('d-none');
                 window.scrollTo(0, 0);
             }
         } catch (err) {
-            alertBox.className = 'alert alert-danger mt-3';
-            alertBox.innerText = "Error: ไม่สามารถเชื่อมต่อกับ Server ได้";
-            alertBox.classList.remove('d-none');
+            alertB.className = 'alert alert-danger mt-3'; alertB.innerText = "Error!"; alertB.classList.remove('d-none');
         } finally {
-            btnSave.disabled = false;
-            loader.classList.add('d-none');
+            btn.disabled = false; loader.classList.add('d-none');
         }
     });
 </script>
