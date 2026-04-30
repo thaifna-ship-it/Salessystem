@@ -1,0 +1,129 @@
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm border-0 rounded-4">
+            <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4">
+                <h4 class="fw-bold text-primary"><i class="bi bi-building-add me-2"></i>ลงทะเบียนลูกค้าใหม่</h4>
+                <p class="text-muted small">ข้อมูลนี้จะถูกบันทึกลงใน Google Sheets และนำไปใช้ในหน้าออกใบเสนอราคา</p>
+            </div>
+            
+            <div class="card-body p-4">
+                <!-- กรอบสำหรับแสดงข้อความแจ้งเตือน -->
+                <div id="alertBox" class="alert d-none" role="alert"></div>
+
+                <form id="registerForm">
+                    <div class="row g-3">
+                        <!-- Company Name -->
+                        <div class="col-12">
+                            <label class="form-label fw-bold">Company Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="companyName" placeholder="เช่น NC Network Asia Co., Ltd." required>
+                        </div>
+
+                        <!-- Address -->
+                        <div class="col-12">
+                            <label class="form-label fw-bold">Address <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="address" rows="3" placeholder="ที่อยู่สำหรับออกเอกสาร (รวมสาขา/สำนักงานใหญ่)" required></textarea>
+                        </div>
+
+                        <!-- Tel (Company) -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Company Tel</label>
+                            <input type="text" class="form-control" id="tel" placeholder="เบอร์โทรศัพท์บริษัท (เช่น 02-123-4567)">
+                        </div>
+
+                        <!-- PIC Name -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">PIC Name (ผู้ติดต่อ) <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="picName" placeholder="ชื่อ-นามสกุล ผู้ติดต่อ" required>
+                        </div>
+
+                        <!-- Email -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Email <span class="text-danger">*</span></label>
+                            <input type="email" class="form-control" id="email" placeholder="example@company.com" required>
+                        </div>
+
+                        <!-- Phone (Mobile) -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Mobile Phone</label>
+                            <input type="text" class="form-control" id="phone" placeholder="เบอร์มือถือผู้ติดต่อ">
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+                    
+                    <div class="d-flex justify-content-end">
+                        <button type="reset" class="btn btn-light me-2">ล้างข้อมูล</button>
+                        <button type="submit" class="btn btn-primary px-4" id="btnSubmit">
+                            <span id="btnText"><i class="bi bi-save me-1"></i> บันทึกข้อมูล</span>
+                            <span id="btnLoader" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('registerForm').addEventListener('submit', function(e) {
+        e.preventDefault(); // ป้องกันไม่ให้หน้าเว็บ Refresh
+        
+        // จัดการสถานะปุ่ม (แสดง Loader)
+        const btnSubmit = document.getElementById('btnSubmit');
+        const btnText = document.getElementById('btnText');
+        const btnLoader = document.getElementById('btnLoader');
+        const alertBox = document.getElementById('alertBox');
+        
+        btnSubmit.disabled = true;
+        btnText.innerText = ' กำลังบันทึก...';
+        btnLoader.classList.remove('d-none');
+        alertBox.classList.add('d-none');
+
+        // รวบรวมข้อมูลจากฟอร์ม
+        const formData = {
+            action: 'registerCompany',
+            companyName: document.getElementById('companyName').value.trim(),
+            address: document.getElementById('address').value.trim(),
+            tel: document.getElementById('tel').value.trim(),
+            picName: document.getElementById('picName').value.trim(),
+            email: document.getElementById('email').value.trim(),
+            phone: document.getElementById('phone').value.trim()
+        };
+
+        // URL ที่คุณให้มา
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxhQ1-Gx3BnlwEqnFDBtkDfPr77LSwxHo-qreFgDKymRokiDw60XxPXlTRZUM4YI5vW/exec";
+
+        // ส่งข้อมูลไปที่ Google Sheets
+        fetch(WEB_APP_URL, {
+            method: 'POST',
+            body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                // แสดงข้อความสำเร็จสีเขียว
+                alertBox.className = 'alert alert-success mt-3';
+                alertBox.innerHTML = `<i class="bi bi-check-circle-fill me-2"></i> ${result.message}`;
+                alertBox.classList.remove('d-none');
+                
+                // ล้างฟอร์ม
+                document.getElementById('registerForm').reset();
+            } else {
+                throw new Error(result.error);
+            }
+        })
+        .catch(error => {
+            // แสดงข้อความ Error สีแดง
+            console.error('Error:', error);
+            alertBox.className = 'alert alert-danger mt-3';
+            alertBox.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-2"></i> เกิดข้อผิดพลาด: โปรดลองอีกครั้ง`;
+            alertBox.classList.remove('d-none');
+        })
+        .finally(() => {
+            // คืนค่าปุ่มกลับเป็นปกติ
+            btnSubmit.disabled = false;
+            btnText.innerHTML = '<i class="bi bi-save me-1"></i> บันทึกข้อมูล';
+            btnLoader.classList.add('d-none');
+        });
+    });
+</script>
