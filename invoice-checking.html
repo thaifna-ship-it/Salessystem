@@ -1,0 +1,155 @@
+<div class="row justify-content-center">
+    <div class="col-lg-12">
+        <div class="card shadow-sm border-0 rounded-4 mb-4">
+            <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4">
+                <h4 class="fw-bold text-primary"><i class="bi bi-check2-square me-2"></i>Invoice Checking</h4>
+                <p class="text-muted small">ตรวจสอบสถานะการวางบิลและชำระเงินรายเดือน (Accounting Dashboard)</p>
+            </div>
+            
+            <div class="card-body p-4">
+                <!-- Filter Area -->
+                <div class="row g-3 mb-4 bg-light p-3 rounded-3 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold">เลือกปี (Year)</label>
+                        <select class="form-select" id="checkYear" onchange="loadInvoiceData()"></select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold">เลือกเดือน (Month)</label>
+                        <select class="form-select" id="checkMonth" onchange="loadInvoiceData()"></select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold">ค้นหาลูกค้า/เลขที่ QT</label>
+                        <input type="text" class="form-control" id="searchInvoices" placeholder="Search..." onkeyup="filterInvoiceTable()">
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-primary w-100" onclick="loadInvoiceData()">
+                            <i class="bi bi-arrow-clockwise"></i> ดึงข้อมูล
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Table -->
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle" id="invoiceTable">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>วันที่</th>
+                                <th>เลขที่ QT</th>
+                                <th>ชื่อลูกค้า</th>
+                                <th class="text-end">ยอดสุทธิ</th>
+                                <th class="text-center">สถานะปัจจุบัน</th>
+                                <th class="text-center">จัดการสถานะ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="invoiceBody">
+                            <!-- ข้อมูลจะโหลดมาที่นี่ -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const INV_API_URL = CONFIG ? CONFIG.WEB_APP_URL : "";
+
+    (function initInvoiceCheck() {
+        setupDateFilters();
+        if (INV_API_URL) loadInvoiceData();
+    })();
+
+    function setupDateFilters() {
+        const monthSelect = document.getElementById('checkMonth');
+        const yearSelect = document.getElementById('checkYear');
+        const monthsTH = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+        
+        monthsTH.forEach((m, i) => monthSelect.add(new Option(m, i + 1)));
+        
+        const currentYear = new Date().getFullYear();
+        for(let i = -1; i <= 2; i++) {
+            const y = currentYear + i;
+            yearSelect.add(new Option(y + 543, y)); // แสดงเป็น พ.ศ.
+        }
+        
+        monthSelect.value = new Date().getMonth() + 1;
+        yearSelect.value = currentYear;
+    }
+
+    async function loadInvoiceData() {
+        const month = document.getElementById('checkMonth').value;
+        const year = document.getElementById('checkYear').value;
+        const tbody = document.getElementById('invoiceBody');
+        
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5"><div class="spinner-border text-primary"></div></td></tr>';
+
+        try {
+            const res = await fetch(`${INV_API_URL}?action=getInvoiceData&month=${month}&year=${year}`);
+            const data = await res.json();
+            renderInvoiceTable(data.logs);
+        } catch (err) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">เกิดข้อผิดพลาดในการดึงข้อมูล</td></tr>';
+        }
+    }
+
+    function renderInvoiceTable(logs) {
+        const tbody = document.getElementById('invoiceBody');
+        tbody.innerHTML = '';
+
+        if (!logs || logs.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-5 text-muted">ไม่พบรายการในงวดเดือนที่เลือก</td></tr>';
+            return;
+        }
+
+        logs.forEach(log => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="small">${log.date}</td>
+                <td class="fw-bold">${log.qtNo}</td>
+                <td>${log.customer}</td>
+                <td class="text-end fw-bold">฿ ${parseFloat(log.grandTotal).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                <td class="text-center">${getStatusBadge(log.status)}</td>
+                <td class="text-center">
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-info" onclick="updateInvoiceStatus('${log.qtNo}', 'Invoiced')">Invoiced</button>
+                        <button class="btn btn-outline-success" onclick="updateInvoiceStatus('${log.qtNo}', 'Paid')">Paid</button>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function getStatusBadge(status) {
+        if (status === 'Paid') return '<span class="badge bg-success px-3">Paid</span>';
+        if (status === 'Invoiced') return '<span class="badge bg-info text-dark px-3">Invoiced</span>';
+        return '<span class="badge bg-warning text-dark px-3">Quoted</span>';
+    }
+
+    async function updateInvoiceStatus(qtNo, newStatus) {
+        if (!confirm(`ยืนยันการเปลี่ยนสถานะ ${qtNo} เป็น ${newStatus}?`)) return;
+
+        try {
+            const res = await fetch(INV_API_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'updateInvoiceStatus', qtNo: qtNo, status: newStatus })
+            });
+            const result = await res.json();
+            if (result.success) {
+                alert('อัปเดตสถานะสำเร็จ');
+                loadInvoiceData();
+            }
+        } catch (err) {
+            alert('เกิดข้อผิดพลาดในการอัปเดต');
+        }
+    }
+
+    function filterInvoiceTable() {
+        const input = document.getElementById("searchInvoices").value.toUpperCase();
+        const tr = document.getElementById("invoiceTable").getElementsByTagName("tr");
+        for (let i = 1; i < tr.length; i++) {
+            const text = tr[i].innerText.toUpperCase();
+            tr[i].style.display = text.indexOf(input) > -1 ? "" : "none";
+        }
+    }
+</script>
