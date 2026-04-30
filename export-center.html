@@ -1,0 +1,155 @@
+<div class="row justify-content-center">
+    <div class="col-lg-12">
+        <div class="card shadow-sm border-0 rounded-4 mb-4">
+            <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4">
+                <h4 class="fw-bold text-primary"><i class="bi bi-cloud-arrow-down me-2"></i>Export Quotation Center</h4>
+                <p class="text-muted small">ค้นหาและจัดการการส่งออกเอกสารใบเสนอราคา (Single/Multi Layout)</p>
+            </div>
+            
+            <div class="card-body p-4">
+                <!-- Search & Filter Area -->
+                <div class="row g-3 mb-4 bg-light p-3 rounded-3">
+                    <div class="col-md-5">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                            <input type="text" class="form-control border-start-0" id="searchQT" placeholder="ค้นหาด้วยเลขที่ QT หรือชื่อลูกค้า..." onkeyup="filterExportTable()">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select" id="filterStatus" onchange="filterExportTable()">
+                            <option value="">-- ทุกสถานะ --</option>
+                            <option value="Quoted">Quoted</option>
+                            <option value="Invoiced">Invoiced</option>
+                            <option value="Paid">Paid</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <button class="btn btn-outline-primary" onclick="loadExportList()">
+                            <i class="bi bi-arrow-clockwise me-1"></i> รีเฟรชข้อมูล
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Table View -->
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle" id="exportTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th>วันที่</th>
+                                <th>เลขที่ QT</th>
+                                <th>ชื่อลูกค้า</th>
+                                <th>ยอดรวมสุทธิ</th>
+                                <th class="text-center">ประเภท Layout</th>
+                                <th class="text-center">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="exportListBody">
+                            <tr>
+                                <td colspan="6" class="text-center py-5">
+                                    <div class="spinner-border text-primary" role="status"></div>
+                                    <div class="mt-2 text-muted">กำลังโหลดรายการใบเสนอราคา...</div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ดึง API URL จาก CONFIG ใน index.html
+    const EXPORT_API_URL = CONFIG ? CONFIG.WEB_APP_URL : "";
+
+    // โหลดข้อมูลเมื่อหน้าจอพร้อม
+    (function initExport() {
+        if (EXPORT_API_URL) loadExportList();
+    })();
+
+    async function loadExportList() {
+        try {
+            // ดึงข้อมูลจาก Sales_Log (เราจะใช้ Action getDashboardData ที่มีอยู่แล้ว หรือสร้างใหม่)
+            const res = await fetch(`${EXPORT_API_URL}?action=getDashboardData`);
+            const data = await res.json();
+            renderExportTable(data.recentLogs);
+        } catch (err) {
+            console.error("Load Export List Failed:", err);
+            document.getElementById('exportListBody').innerHTML = '<tr><td colspan="6" class="text-center text-danger">เกิดข้อผิดพลาดในการโหลดข้อมูล</td></tr>';
+        }
+    }
+
+    function renderExportTable(logs) {
+        const tbody = document.getElementById('exportListBody');
+        tbody.innerHTML = '';
+
+        if (logs.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-5">ไม่พบประวัติการออกใบเสนอราคา</td></tr>';
+            return;
+        }
+
+        logs.forEach(log => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="text-muted small">${log.date}</td>
+                <td class="fw-bold">${log.qtNo}</td>
+                <td>${log.customer}</td>
+                <td class="fw-bold text-end">฿ ${log.grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                <td class="text-center" id="type-${log.qtNo}">
+                    <span class="spinner-grow spinner-grow-sm text-secondary" role="status"></span>
+                </td>
+                <td class="text-center">
+                    <button class="btn btn-sm btn-primary px-3 shadow-sm" onclick="handleExport('${log.qtNo}')">
+                        <i class="bi bi-file-pdf-fill me-1"></i> Export PDF
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+            
+            // เรียกตรวจสอบประเภท Layout แยกรายใบ (Background Task)
+            checkType(log.qtNo);
+        });
+    }
+
+    // ฟังก์ชันตรวจสอบประเภท Layout ตาม Logic ที่คุยกัน
+    async function checkType(qtNo) {
+        try {
+            const res = await fetch(`${EXPORT_API_URL}?action=checkQuotationType&qtNo=${qtNo}`);
+            const result = await res.json();
+            const badgeCell = document.getElementById(`type-${qtNo}`);
+            
+            if (result.layoutType === 'MULTI') {
+                badgeCell.innerHTML = `<span class="badge bg-warning text-dark"><i class="bi bi-stack me-1"></i> Multi (${result.itemCount})</span>`;[cite: 11]
+            } else {
+                badgeCell.innerHTML = `<span class="badge bg-info text-white"><i class="bi bi-file-earmark-person me-1"></i> Single</span>`;[cite: 11]
+            }
+        } catch (err) {
+            console.error(`Check type failed for ${qtNo}:`, err);
+        }
+    }
+
+    // ฟังก์ชันหลักในการจัดการการ Export
+    async function handleExport(qtNo) {
+        // 1. ตรวจสอบประเภท Layout ก่อนเลือก Layout
+        const res = await fetch(`${EXPORT_API_URL}?action=checkQuotationType&qtNo=${qtNo}`);
+        const result = await res.json();[cite: 11]
+
+        alert(`กำลังเตรียมส่งออกเลขที่ ${qtNo} ด้วยรูปแบบ ${result.layoutType} Layout...`);[cite: 11]
+        
+        // ตรงนี้ในอนาคตเราจะเชื่อมต่อไปยัง PDF Engine (เช่น jsPDF หรือหน้า Preview)
+        // window.open(`preview-${result.layoutType.toLowerCase()}.html?qtNo=${qtNo}`, '_blank');
+    }
+
+    function filterExportTable() {
+        const input = document.getElementById("searchQT").value.toUpperCase();
+        const status = document.getElementById("filterStatus").value.toUpperCase();
+        const tr = document.getElementById("exportTable").getElementsByTagName("tr");
+        
+        for (let i = 1; i < tr.length; i++) {
+            const text = tr[i].innerText.toUpperCase();
+            const matchesSearch = text.indexOf(input) > -1;
+            const matchesStatus = status === "" || text.indexOf(status) > -1;
+            tr[i].style.display = (matchesSearch && matchesStatus) ? "" : "none";
+        }
+    }
+</script>
