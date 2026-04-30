@@ -1,0 +1,316 @@
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card shadow-sm border-0 rounded-4 mb-4">
+            <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4 d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="fw-bold text-primary"><i class="bi bi-file-earmark-text me-2"></i>Single Service Quotation</h4>
+                    <p class="text-muted small mb-0">ออกใบเสนอราคาสำหรับ 1 บริการ (ข้อมูลดึงจาก Google Sheets อัตโนมัติ)</p>
+                </div>
+                <button class="btn btn-outline-secondary btn-sm" onclick="loadPage('dashboard', document.querySelector('.nav-link.active'))">
+                    <i class="bi bi-arrow-left"></i> กลับ
+                </button>
+            </div>
+            
+            <div class="card-body p-4">
+                <!-- Alert Box -->
+                <div id="qtAlertBox" class="alert d-none" role="alert"></div>
+
+                <form id="singleQuotationForm">
+                    <!-- 1. CUSTOMER SECTION -->
+                    <div class="card bg-light border-0 mb-4">
+                        <div class="card-body">
+                            <h6 class="fw-bold text-secondary mb-3 text-uppercase">1. ข้อมูลลูกค้า (Customer)</h6>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">ค้นหา/เลือกบริษัทลูกค้า <span class="text-danger">*</span></label>
+                                <select class="form-select" id="qtCustomerSelect" onchange="autoFillCustomerInfo()" required>
+                                    <option value="">-- กำลังโหลดรายชื่อลูกค้า... --</option>
+                                </select>
+                                <div class="form-text">หากไม่มีรายชื่อ ให้ไปเพิ่มที่เมนู <a href="#" onclick="loadPage('company-register', null)">New Company Register</a></div>
+                            </div>
+
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <label class="form-label small text-muted">Address</label>
+                                    <textarea class="form-control bg-white" id="qtCustAddress" rows="2" readonly disabled></textarea>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small text-muted">PIC Name</label>
+                                    <input type="text" class="form-control bg-white" id="qtCustPic" readonly disabled>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small text-muted">Email</label>
+                                    <input type="email" class="form-control bg-white" id="qtCustEmail" readonly disabled>
+                                </div>
+                                <!-- Hidden Field ไว้เก็บชื่อบริษัทเพียวๆ -->
+                                <input type="hidden" id="qtCustNameHidden">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. SERVICE DETAILS -->
+                    <div class="card border-primary mb-4">
+                        <div class="card-body">
+                            <h6 class="fw-bold text-primary mb-3 text-uppercase">2. รายละเอียดบริการ (Service Details)</h6>
+                            
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-12">
+                                    <label class="form-label fw-bold">ประเภทบริการ <span class="text-danger">*</span></label>
+                                    <select class="form-select border-primary" id="qtServiceSelect" onchange="autoFillServiceDetails()" required>
+                                        <option value="">-- กำลังโหลดประเภทบริการ... --</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- ส่วนคำนวณราคา -->
+                            <div class="row g-3 align-items-end mb-4 pb-3 border-bottom">
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold">จำนวน (Qty)</label>
+                                    <input type="number" class="form-control text-center" id="qtQty" value="1" min="1" step="0.5" oninput="calcTotals()" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold">ราคาต่อหน่วย (Unit Price)</label>
+                                    <input type="number" class="form-control text-end" id="qtUnitPrice" value="0" min="0" oninput="calcTotals()" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold">ค่าใช้จ่ายเริ่มต้น (Initial Cost)</label>
+                                    <input type="number" class="form-control text-end" id="qtInitialCost" value="0" min="0" oninput="calcTotals()">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold text-danger">ส่วนลด (Discount)</label>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control text-end" id="qtDiscountVal" value="0" min="0" oninput="calcTotals()">
+                                        <select class="form-select bg-light" style="max-width: 70px;" id="qtDiscountType" onchange="calcTotals()">
+                                            <option value="baht">฿</option>
+                                            <option value="percent">%</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- ส่วนสรุปยอด (Summary) -->
+                            <div class="row justify-content-end">
+                                <div class="col-md-6 col-lg-5">
+                                    <div class="bg-light p-3 rounded">
+                                        <div class="d-flex justify-content-between mb-2 text-muted">
+                                            <span>Sub-total (ยอดก่อนภาษี):</span>
+                                            <span id="txtSubTotal" class="fw-bold">0.00</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-2 text-muted">
+                                            <span>VAT 7%:</span>
+                                            <span id="txtVat" class="fw-bold">0.00</span>
+                                        </div>
+                                        <hr class="my-2 border-secondary">
+                                        <div class="d-flex justify-content-between align-items-center mt-2">
+                                            <span class="h6 fw-bold mb-0 text-primary">Grand Total:</span>
+                                            <span id="txtGrandTotal" class="h4 fw-bold mb-0 text-primary">0.00</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. INTERNAL INFO (Sales PIC) -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">ผู้รับผิดชอบ (Sales PIC) <span class="text-danger">*</span></label>
+                            <select class="form-select" id="qtSalesPic" required>
+                                <option value="">-- โหลดรายชื่อ Sales... --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100 py-2 fw-bold shadow-sm" id="btnSaveQt">
+                                <span id="qtBtnText"><i class="bi bi-file-earmark-check me-2"></i> สร้างใบเสนอราคา (Create QT)</span>
+                                <span id="qtBtnLoader" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ตัวแปรเก็บข้อมูล Master Data ที่โหลดมาจาก Google Sheets
+    let g_customers = [];
+    let g_services = [];
+    
+    // ดึง URL จากตัวแปร Global ใน index.html ถ้ามี หรือกำหนดตรงนี้
+    const SCRIPT_URL = CONFIG ? CONFIG.WEB_APP_URL : "https://script.google.com/macros/s/AKfycbxhQ1-Gx3BnlwEqnFDBtkDfPr77LSwxHo-qreFgDKymRokiDw60XxPXlTRZUM4YI5vW/exec";
+
+    // เมื่อโหลดไฟล์นี้ (ผ่าน index.html) ให้ดึงข้อมูลมาแสดงทันที
+    (function initSingleQuotation() {
+        loadMasterData();
+    })();
+
+    // 1. ดึงข้อมูล Master (Customers, Services, Staff) จาก Google Sheets
+    function loadMasterData() {
+        fetch(`${SCRIPT_URL}?action=getSingleQtMasterData`)
+            .then(res => res.json())
+            .then(data => {
+                g_customers = data.customers || [];
+                g_services = data.services || [];
+                
+                // นำลูกค้าใส่ Dropdown
+                const cSelect = document.getElementById('qtCustomerSelect');
+                cSelect.innerHTML = '<option value="">-- เลือกลูกค้า --</option>';
+                g_customers.forEach(c => {
+                    cSelect.add(new Option(c.companyName, c.companyName));
+                });
+
+                // นำ Service ใส่ Dropdown
+                const sSelect = document.getElementById('qtServiceSelect');
+                sSelect.innerHTML = '<option value="">-- เลือกประเภทบริการ --</option>';
+                g_services.forEach(s => {
+                    sSelect.add(new Option(s.name, s.name));
+                });
+
+                // นำ Staff ใส่ Dropdown
+                const staffSelect = document.getElementById('qtSalesPic');
+                staffSelect.innerHTML = '<option value="">-- เลือก Sales --</option>';
+                (data.staff || []).forEach(st => {
+                    staffSelect.add(new Option(st.name, st.name));
+                });
+            })
+            .catch(err => console.error("Error loading master data:", err));
+    }
+
+    // 2. เติมข้อมูลลูกค้าเมื่อเลือก Dropdown
+    function autoFillCustomerInfo() {
+        const selectedName = document.getElementById('qtCustomerSelect').value;
+        const cust = g_customers.find(c => c.companyName === selectedName);
+        
+        if (cust) {
+            document.getElementById('qtCustNameHidden').value = cust.companyName;
+            document.getElementById('qtCustAddress').value = cust.address || '';
+            document.getElementById('qtCustPic').value = cust.picName || '';
+            document.getElementById('qtCustEmail').value = cust.email || '';
+        } else {
+            document.getElementById('qtCustNameHidden').value = '';
+            document.getElementById('qtCustAddress').value = '';
+            document.getElementById('qtCustPic').value = '';
+            document.getElementById('qtCustEmail').value = '';
+        }
+    }
+
+    // 3. เติมราคา Service พื้นฐานเมื่อเลือก Dropdown
+    function autoFillServiceDetails() {
+        const selectedService = document.getElementById('qtServiceSelect').value;
+        const svc = g_services.find(s => s.name === selectedService);
+        
+        if (svc) {
+            document.getElementById('qtUnitPrice').value = svc.defaultPrice || 0;
+            calcTotals(); // สั่งคำนวณใหม่
+        }
+    }
+
+    // 4. คำนวณตัวเลข (ตัวเลขล้วน ไม่ใส่เครื่องหมายคอมม่าตอนคำนวณ เพื่อกัน Error)
+    function calcTotals() {
+        const qty = parseFloat(document.getElementById('qtQty').value) || 0;
+        const unitPrice = parseFloat(document.getElementById('qtUnitPrice').value) || 0;
+        const initialCost = parseFloat(document.getElementById('qtInitialCost').value) || 0;
+        
+        const discVal = parseFloat(document.getElementById('qtDiscountVal').value) || 0;
+        const discType = document.getElementById('qtDiscountType').value;
+
+        // ราคาตั้งต้น
+        let baseTotal = (qty * unitPrice) + initialCost;
+        
+        // หักส่วนลด
+        let discount = (discType === 'percent') ? (baseTotal * (discVal / 100)) : discVal;
+        
+        // ยอดก่อนแวต
+        let subTotal = baseTotal - discount;
+        if(subTotal < 0) subTotal = 0; // กันยอดติดลบ
+        
+        // แวต 7%
+        let vat = subTotal * 0.07;
+        
+        // ยอดสุทธิ
+        let grandTotal = subTotal + vat;
+
+        // แสดงผลลัพธ์ (ใส่คอมม่าให้อ่านง่าย)
+        document.getElementById('txtSubTotal').innerText = subTotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        document.getElementById('txtVat').innerText = vat.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        document.getElementById('txtGrandTotal').innerText = grandTotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    }
+
+    // 5. ส่งข้อมูลบันทึกเมื่อกด Submit
+    document.getElementById('singleQuotationForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        // เช็คว่ายอดเกิน 0 ไหม
+        const grandTotalText = document.getElementById('txtGrandTotal').innerText.replace(/,/g, '');
+        if(parseFloat(grandTotalText) <= 0) {
+            alert("ยอดรวมสุทธิต้องมากกว่า 0 บาท");
+            return;
+        }
+
+        // จัดการปุ่ม (Loading)
+        const btnSave = document.getElementById('btnSaveQt');
+        const btnText = document.getElementById('qtBtnText');
+        const btnLoader = document.getElementById('qtBtnLoader');
+        const alertBox = document.getElementById('qtAlertBox');
+        
+        btnSave.disabled = true;
+        btnText.innerText = ' กำลังสร้างเอกสาร...';
+        btnLoader.classList.remove('d-none');
+        alertBox.classList.add('d-none');
+
+        // ข้อมูลที่จะส่งกลับไป Sheet (ลบคอมม่าออกให้เหลือแต่ตัวเลข)
+        const postData = {
+            action: 'saveSingleQuotation',
+            customerName: document.getElementById('qtCustNameHidden').value,
+            serviceName: document.getElementById('qtServiceSelect').value,
+            qty: document.getElementById('qtQty').value,
+            unitPrice: document.getElementById('qtUnitPrice').value,
+            initialCost: document.getElementById('qtInitialCost').value,
+            discount: document.getElementById('qtDiscountVal').value,
+            discountType: document.getElementById('qtDiscountType').value,
+            subTotal: document.getElementById('txtSubTotal').innerText.replace(/,/g, ''),
+            vatAmt: document.getElementById('txtVat').innerText.replace(/,/g, ''),
+            grandTotal: grandTotalText,
+            salesPic: document.getElementById('qtSalesPic').value
+        };
+
+        // ส่งแบบ JSON ที่จับต้องได้ (เอา no-cors ออกแล้ว)
+        fetch(SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify(postData)
+        })
+        .then(res => res.json())
+        .then(result => {
+            if (result.success) {
+                // แจ้งเตือนความสำเร็จและบอกเลข QT
+                alertBox.className = 'alert alert-success mt-3';
+                alertBox.innerHTML = `
+                    <h5 class="alert-heading"><i class="bi bi-check-circle-fill me-2"></i> สำเร็จ!</h5>
+                    <p class="mb-0">สร้างใบเสนอราคาเรียบร้อยแล้ว <strong>(เลขที่: ${result.qtNo})</strong></p>
+                `;
+                alertBox.classList.remove('d-none');
+                
+                // เคลียร์ฟอร์มส่วนราคา เพื่อเตรียมทำใบต่อไป
+                document.getElementById('qtQty').value = 1;
+                document.getElementById('qtInitialCost').value = 0;
+                document.getElementById('qtDiscountVal').value = 0;
+                calcTotals();
+                
+                // เลื่อนจอกลับไปด้านบน
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                throw new Error(result.error || "Unknown Error");
+            }
+        })
+        .catch(err => {
+            alertBox.className = 'alert alert-danger mt-3';
+            alertBox.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-2"></i> บันทึกไม่สำเร็จ: ${err.message}`;
+            alertBox.classList.remove('d-none');
+        })
+        .finally(() => {
+            btnSave.disabled = false;
+            btnText.innerHTML = '<i class="bi bi-file-earmark-check me-2"></i> สร้างใบเสนอราคา (Create QT)';
+            btnLoader.classList.add('d-none');
+        });
+    });
+</script>
